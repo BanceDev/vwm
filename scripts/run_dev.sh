@@ -1,3 +1,5 @@
 #!/bin/sh
-DISPLAY=:2
-Xephyr -br -ac -noreset -screen 1280x720 :2 &
+
+set -e
+
+xinit ./xinitrc -- $(command -v Xephyr) :2 -screen 1024x768

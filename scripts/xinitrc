@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Python script to run
+exec ../assets/nostwm-session

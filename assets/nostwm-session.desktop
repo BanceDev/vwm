@@ -1,10 +1,10 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=BiscuitWM session
-Comment=Delicious window manager
-Exec=biscuitwm-session
+Name=NostWM
+Comment=A window manager that feels like home
+Exec=nostwm-session
 Terminal=False
-TryExec=biscuitwm
+TryExec=nostwm
 Type=Application
 
 [Window Manager]

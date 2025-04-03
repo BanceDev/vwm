@@ -2,4 +2,5 @@
 # xsetroot -solid "#D2B48C"
 # xrdb -load $HOME/.Xdefaults
 # xterm &
-exec /usr/bin/biscuitwm
+#exec /usr/bin/nostwm
+exec ../assets/nostwm
