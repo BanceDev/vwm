@@ -6,7 +6,7 @@ actions:
  # Programs to launch
  - command: "xclock"
    key: "c"
- - command: "frostty"
+ - command: "nautilus"
    key: "t"
  # How to cycle through windows
  - action: "NEXT_WINDOW"

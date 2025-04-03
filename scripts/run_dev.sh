@@ -2,4 +2,4 @@
 
 set -e
 
-xinit ./xinitrc -- $(command -v Xephyr) :2 -screen 1024x768
+xinit ./xinitrc -- $(command -v Xephyr) :2 -br -ac -noreset -screen 1024x768 -no-host-grab
