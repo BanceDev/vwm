@@ -911,7 +911,7 @@ class vwm:
         debug('handler: handle_map_request called')
         self.manage_window(event.window)
         self.focus_window(event.window)
-        self.cb_maximize_window(event.window, HORIZONTAL | VERTICAL)
+        self.cb_tile_windows(event.window)
         self.framed_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
 
     def handle_destroy_notify(self, event):
