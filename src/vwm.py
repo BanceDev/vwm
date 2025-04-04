@@ -2,7 +2,6 @@ import os
 import sys
 import subprocess
 import re
-import datetime
 import time
 import math
 from Xlib import X, XK, display
@@ -34,11 +33,9 @@ BROWSER = 'nitrogen'
 PRIORITY_WINDOW = EDITOR
 
 FRAME_COLOR = 'light sky blue'
-FRAME_THICKNESS = 2
+FRAME_THICKNESS = 4
 
 FONT = '-misc-fixed-bold-r-normal--18-120-100-100-c-90-iso10646-1'
-
-SCREENSHOT_DIR = f'{os.getenv("HOME")}/screenshots'
 
 EVENTS = {
     X.ButtonPress: 'handle_button_press',
@@ -56,33 +53,31 @@ EVENTS = {
 
 # TODO: Config file this shit too
 KEY_BINDS = {
-    ('i', X.Mod1Mask | X.ControlMask): {'method': 'cb_focus_next_window', 'arg': FORWARD},
-    ('r', X.Mod1Mask | X.ControlMask): {'method': 'cb_raise_window'},
-    ('1', X.Mod1Mask | X.ControlMask): {'command': f'{TERMINAL} &'},
-    ('2', X.Mod1Mask | X.ControlMask): {'command': f'{EDITOR} &'},
-    ('3', X.Mod1Mask | X.ControlMask): {'command': f'{BROWSER} &'},
-    ('m', X.Mod1Mask | X.ControlMask): {'method': 'cb_maximize_window', 'arg': HORIZONTAL | VERTICAL},
-    ('comma', X.Mod1Mask | X.ControlMask): {'method': 'cb_maximize_window', 'arg': VERTICAL},
-    ('h', X.Mod1Mask | X.ControlMask): {'method': 'cb_halve_window', 'arg': LEFT},
-    ('l', X.Mod1Mask | X.ControlMask): {'method': 'cb_halve_window', 'arg': RIGHT},
-    ('j', X.Mod1Mask | X.ControlMask): {'method': 'cb_halve_window', 'arg': LOWER},
-    ('k', X.Mod1Mask | X.ControlMask): {'method': 'cb_halve_window', 'arg': UPPER},
-    ('f', X.Mod1Mask | X.ControlMask): {'method': 'cb_move_window_to_next_monitor'},
-    ('s', X.Mod1Mask | X.ControlMask): {'method': 'cb_swap_windows_bw_monitors'},
-    ('z', X.Mod1Mask | X.ControlMask): {'method': 'cb_destroy_window'},
-    ('Print', X.ControlMask): {'method': 'cb_capture_screen', 'arg': 'current'},
-    ('Print', 0): {'method': 'cb_capture_screen', 'arg': 'full'},
+    ('i', X.Mod1Mask): {'method': 'cb_focus_next_window', 'arg': FORWARD},
+    ('r', X.Mod1Mask): {'method': 'cb_raise_window'},
+    ('1', X.Mod1Mask): {'command': f'{TERMINAL} &'},
+    ('2', X.Mod1Mask): {'command': f'{EDITOR} &'},
+    ('3', X.Mod1Mask): {'command': f'{BROWSER} &'},
+    ('m', X.Mod1Mask): {'method': 'cb_maximize_window', 'arg': HORIZONTAL | VERTICAL},
+    ('comma', X.Mod1Mask): {'method': 'cb_maximize_window', 'arg': VERTICAL},
+    ('h', X.Mod1Mask): {'method': 'cb_halve_window', 'arg': LEFT},
+    ('l', X.Mod1Mask): {'method': 'cb_halve_window', 'arg': RIGHT},
+    ('j', X.Mod1Mask): {'method': 'cb_halve_window', 'arg': LOWER},
+    ('k', X.Mod1Mask): {'method': 'cb_halve_window', 'arg': UPPER},
+    ('f', X.Mod1Mask): {'method': 'cb_move_window_to_next_monitor'},
+    ('s', X.Mod1Mask): {'method': 'cb_swap_windows_bw_monitors'},
+    ('z', X.Mod1Mask): {'method': 'cb_destroy_window'},
     ('F1', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 0},
     ('F2', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 1},
     ('F3', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 2},
     ('F4', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 3},
-    ('d', X.Mod1Mask | X.ControlMask): {'method': 'cb_send_window_to_next_vscreen', 'arg': FORWARD},
-    ('a', X.Mod1Mask | X.ControlMask): {'method': 'cb_send_window_to_next_vscreen', 'arg': BACKWARD},
-    ('t', X.Mod1Mask | X.ControlMask): {'method': 'cb_tile_windows'},
-    ('Delete', X.Mod1Mask | X.ControlMask): {'function': 'restart'},
-    ('Home', X.Mod1Mask | X.ControlMask): {'method': 'cb_reconfigure_monitors', 'arg': True},
-    ('End', X.Mod1Mask | X.ControlMask): {'method': 'cb_reconfigure_monitors', 'arg': False},
-    ('BackSpace', X.Mod1Mask | X.ControlMask): {'method': 'cb_set_always_top'},
+    ('d', X.Mod1Mask): {'method': 'cb_send_window_to_next_vscreen', 'arg': FORWARD},
+    ('a', X.Mod1Mask): {'method': 'cb_send_window_to_next_vscreen', 'arg': BACKWARD},
+    ('t', X.Mod1Mask): {'method': 'cb_tile_windows'},
+    ('Delete', X.Mod1Mask): {'function': 'restart'},
+    ('Home', X.Mod1Mask): {'method': 'cb_reconfigure_monitors', 'arg': True},
+    ('End', X.Mod1Mask): {'method': 'cb_reconfigure_monitors', 'arg': False},
+    ('BackSpace', X.Mod1Mask): {'method': 'cb_set_always_top'},
 }
 
 
@@ -95,7 +90,7 @@ def restart():
     os.execvp(sys.argv[0], [sys.argv[0]])
 
 
-class hogeWM:
+class vwm:
     def __init__(self):
         self.display = display.Display()
         self.screen = self.display.screen()
@@ -640,27 +635,6 @@ class hogeWM:
         window.destroy()
         self.unmanage_window(window)
 
-    def capture_screen(self, window):
-        # debug('function: capture_screen called')
-        if window is None:
-            capture = '-window root'
-        else:
-            try:
-                capture = f'-window {self.get_window_id(window)}'
-            except:
-                return
-        now = datetime.datetime.now()
-        date = '{}-{}-{}_{}:{}:{}.{}'.format(
-            str(now.year).zfill(4),
-            str(now.month).zfill(2),
-            str(now.day).zfill(2),
-            str(now.hour).zfill(2),
-            str(now.minute).zfill(2),
-            str(now.second).zfill(2),
-            str(now.microsecond).zfill(6),
-        )
-        os.system(f'import {capture} {SCREENSHOT_DIR}/capture{date}.png')
-
     def select_vscreen(self, num):
         # debug('function: select_vscreen called')
         if num < 0:
@@ -833,17 +807,6 @@ class hogeWM:
         except:
             return
 
-    def cb_capture_screen(self, event, args):
-        debug('callback: cb_capture_screen called')
-        window = self.framed_window
-        if args == 'current':
-            try:
-                self.capture_screen(window)
-            except:
-                return
-        else:
-            self.capture_screen(None)
-
     def cb_select_vscreen(self, event, num):
         debug('callback: cb_select_vscreen called')
         if self.current_vscreen == num:
@@ -948,6 +911,7 @@ class hogeWM:
         debug('handler: handle_map_request called')
         self.manage_window(event.window)
         self.focus_window(event.window)
+        self.cb_maximize_window(event.window, HORIZONTAL | VERTICAL)
         self.framed_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
 
     def handle_destroy_notify(self, event):
@@ -1024,12 +988,7 @@ class hogeWM:
 
 
 def main():
-    try:
-        with open(f'{os.getenv("HOME")}/.hogewmrc', 'r') as config:
-            exec(config.read(), globals())
-    except FileNotFoundError:
-        pass
-    wm = hogeWM()
+    wm = vwm()
     for win in wm.managed_windows:
         print(wm.get_window_name(win), file=sys.stderr)
     wm.loop()
