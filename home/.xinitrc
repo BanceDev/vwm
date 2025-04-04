@@ -7,7 +7,5 @@ xmodmap $HOME/.Xmodmap
 xset r rate 200 40
 setxkbmap -option ctrl:nocaps
 
-$HOME/hogewm/hogewm 2> $HOME/hogewm/debug.log &
-emacs &
-urxvt -geometry 80x35-64-0 &
-$HOME/hogewm/eternal_sleep
+# python3 $HOME/vwm/vwm.py 2> $HOME/vwm/debug.log &
+# python3 $HOME/vwm/eternal_sleep.py

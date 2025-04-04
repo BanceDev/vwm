@@ -1,10 +1,10 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=NostWM
-Comment=A window manager that feels like home
-Exec=nostwm-session
+Name=VWM
+Comment=A window manager for vim enthusiasts
+Exec=vwm-session
 Terminal=False
-TryExec=nostwm
+TryExec=vwm
 Type=Application
 
 [Window Manager]

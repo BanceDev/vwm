@@ -2,5 +2,4 @@
 # xsetroot -solid "#D2B48C"
 # xrdb -load $HOME/.Xdefaults
 # xterm &
-#exec /usr/bin/nostwm
-exec ../assets/nostwm
+exec /usr/bin/vwm

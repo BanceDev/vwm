@@ -1,5 +1,3 @@
-#!/bin/python3
-
 import os
 import sys
 import subprocess
@@ -28,13 +26,14 @@ BACKWARD = 1
 
 MAX_VSCREEN = 4
 
+# TODO: Config file this shit
 EDITOR = 'gnome-text-editor'
-TERMINAL = 'frostty'
-BROWSER = 'firefox'
+TERMINAL = 'xterm'
+BROWSER = 'nitrogen'
 
 PRIORITY_WINDOW = EDITOR
 
-FRAME_COLOR = 'lemon chiffon'
+FRAME_COLOR = 'light sky blue'
 FRAME_THICKNESS = 2
 
 FONT = '-misc-fixed-bold-r-normal--18-120-100-100-c-90-iso10646-1'
@@ -55,13 +54,13 @@ EVENTS = {
     X.ConfigureRequest: 'handle_configure_request',
 }
 
+# TODO: Config file this shit too
 KEY_BINDS = {
     ('i', X.Mod1Mask | X.ControlMask): {'method': 'cb_focus_next_window', 'arg': FORWARD},
     ('r', X.Mod1Mask | X.ControlMask): {'method': 'cb_raise_window'},
     ('1', X.Mod1Mask | X.ControlMask): {'command': f'{TERMINAL} &'},
     ('2', X.Mod1Mask | X.ControlMask): {'command': f'{EDITOR} &'},
     ('3', X.Mod1Mask | X.ControlMask): {'command': f'{BROWSER} &'},
-    ('v', X.Mod1Mask | X.ControlMask): {'command': 'pkill hogemonitor || hogemonitor 1 &'},
     ('m', X.Mod1Mask | X.ControlMask): {'method': 'cb_maximize_window', 'arg': HORIZONTAL | VERTICAL},
     ('comma', X.Mod1Mask | X.ControlMask): {'method': 'cb_maximize_window', 'arg': VERTICAL},
     ('h', X.Mod1Mask | X.ControlMask): {'method': 'cb_halve_window', 'arg': LEFT},

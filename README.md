@@ -1,32 +1,10 @@
-# hoge window manager
-- hogewm is a simple X11 window manager written in Python3
-- This wm is based on xpywm(https://github.com/h-ohsaki/xpywm.git )
+# VWM
+- vwm is a simple X11 window manager written in Python3
 
 ## REQUIREMENTS
 - requiered
-  - Python 3.7 and above (for dict order)
+  - Python 3.7 and above
   - python-xlib (https://pypi.org/project/python-xlib/ )
-- optional (recommended)
-  - rxvt-unicode (invoked by ctrl-alt-1)
-  - emacs (invoked by ctrl-alt-2)
-  - google-chrome (invoked by ctrl-alt-3)
-  - Roboto Mono Medium for Powerline (using in .Xdefualts)
-  - imagemagick (for screenshot)
-  - hogemonitor (https://github.com/void-hoge/hogemonitor.git )
-
-## INSTALLATION
-```
-$ sudo apt install xbase-clients rxvt-unicode imagemagick emacs
-$ sudo apt install /google/chrome/installer.deb
-$ cd
-$ git clone https://github.com/powerline/fonts.git
-$ cd fonts
-$ ./install.sh
-$ cd
-$ git clone https://github.com/void-hoge/hogewm.git
-$ cp hogewm/home/.* $HOME
-```
-- `startx` to start.
 
 ## KEY BIND
 You can configure keybinds and their actions by modifying `KEY_BINDS` in [hogewm](./hogewm).
@@ -59,5 +37,3 @@ You can configure keybinds and their actions by modifying `KEY_BINDS` in [hogewm
 ## LICENSE
 - GPLv3
 
-## AUTHOR
-- Mugi Noda (void-hoge)

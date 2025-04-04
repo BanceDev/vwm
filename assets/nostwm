@@ -1,4 +1,0 @@
-#!/bin/sh
-#/usr/bin/python3 /usr/bin/biscuitwm-src/main.py
-
-python3 ../src/main.py
