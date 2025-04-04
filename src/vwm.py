@@ -58,22 +58,16 @@ KEY_BINDS = {
     ('1', X.Mod1Mask): {'command': f'{TERMINAL} &'},
     ('2', X.Mod1Mask): {'command': f'{EDITOR} &'},
     ('3', X.Mod1Mask): {'command': f'{BROWSER} &'},
-    ('m', X.Mod1Mask): {'method': 'cb_maximize_window', 'arg': HORIZONTAL | VERTICAL},
-    ('comma', X.Mod1Mask): {'method': 'cb_maximize_window', 'arg': VERTICAL},
-    ('h', X.Mod1Mask): {'method': 'cb_halve_window', 'arg': LEFT},
-    ('l', X.Mod1Mask): {'method': 'cb_halve_window', 'arg': RIGHT},
-    ('j', X.Mod1Mask): {'method': 'cb_halve_window', 'arg': LOWER},
-    ('k', X.Mod1Mask): {'method': 'cb_halve_window', 'arg': UPPER},
+    ('m', X.Mod1Mask): {'method': 'cb_maximize_window'},
     ('f', X.Mod1Mask): {'method': 'cb_move_window_to_next_monitor'},
     ('s', X.Mod1Mask): {'method': 'cb_swap_windows_bw_monitors'},
-    ('z', X.Mod1Mask): {'method': 'cb_destroy_window'},
+    ('x', X.Mod1Mask): {'method': 'cb_destroy_window'},
     ('F1', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 0},
     ('F2', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 1},
     ('F3', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 2},
     ('F4', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 3},
     ('d', X.Mod1Mask): {'method': 'cb_send_window_to_next_vscreen', 'arg': FORWARD},
     ('a', X.Mod1Mask): {'method': 'cb_send_window_to_next_vscreen', 'arg': BACKWARD},
-    ('t', X.Mod1Mask): {'method': 'cb_tile_windows'},
     ('Delete', X.Mod1Mask): {'function': 'restart'},
     ('Home', X.Mod1Mask): {'method': 'cb_reconfigure_monitors', 'arg': True},
     ('End', X.Mod1Mask): {'method': 'cb_reconfigure_monitors', 'arg': False},
@@ -552,6 +546,18 @@ class vwm:
         y = geom.y
         width = geom.width
         height = geom.height
+
+        # if window is maximized go back to tile view
+        if (
+            x == monitor['x']
+            and y == monitor['y']
+            and width == monitor['width']
+            and height == monitor['height']
+        ):
+            print("we in here")
+            self.tile_windows(window)
+            return
+
         if mask & VERTICAL != 0:
             y = monitor['y']
             height = monitor['height']
@@ -559,35 +565,6 @@ class vwm:
             x = monitor['x']
             width = monitor['width']
         window.configure(x=x, y=y, width=width, height=height)
-
-    def halve_window(self, window, args):
-        # debug('function: halve_window called')
-        if window not in self.exposed_windows:
-            return
-        geom = self.get_window_geometry(window)
-        if geom is None:
-            return
-        if args & (LEFT | RIGHT) != 0:
-            if geom.width <= WINDOW_MIN_WIDTH:
-                return
-        if args & (UPPER | LOWER) != 0:
-            if geom.height <= WINDOW_MIN_HEIGHT:
-                return
-        x, y, width, height = geom.x, geom.y, geom.width, geom.height
-        px, py = 0, 0
-        if args & (LEFT | RIGHT) != 0:
-            width //= 2
-        if args & (UPPER | LOWER) != 0:
-            height //= 2
-        if args & RIGHT != 0:
-            x += width
-            px += width
-        if args & LOWER != 0:
-            y += height
-            py += height
-        window.configure(x=x, y=y, width=width, height=height)
-        self.managed_windows[window] = self.get_monitor_geometry_with_window(
-            window)
 
     def move_window_to_monitor(self, window, dst):
         # debug('function: move_window_to_monitor called')
@@ -759,21 +736,12 @@ class vwm:
         self.focus_window(window)
         self.set_window_to_stack_top(window)
 
-    def cb_maximize_window(self, event, args):
+    def cb_maximize_window(self, event):
         debug('callback: cb_maximize_window called')
         window = self.framed_window
         try:
-            self.maximize_window(window, args)
-            window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
-            self.draw_frame_windows()
-        except:
-            return
 
-    def cb_halve_window(self, event, args):
-        debug('callback: cb_halve_window called')
-        window = self.framed_window
-        try:
-            self.halve_window(window, args)
+            self.maximize_window(window, HORIZONTAL | VERTICAL)
             window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
             self.draw_frame_windows()
         except:
@@ -802,8 +770,6 @@ class vwm:
         window = self.framed_window
         try:
             self.destroy_window(window)
-            self.focus_next_window(window)
-            self.framed_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
         except:
             return
 
@@ -828,12 +794,6 @@ class vwm:
             self.select_vscreen(idx)
             window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
             self.focus_window(window)
-
-    def cb_tile_windows(self, event):
-        debug('callback: cb_tile_windows called')
-        window = self.framed_window
-        self.tile_windows(window)
-        self.focus_window(window)
 
     def cb_reconfigure_monitors(self, event, remap):
         debug('callback: cb_reconfigure_monitors called')
@@ -896,6 +856,7 @@ class vwm:
     def handle_enter_notify(self, event):
         debug('handler: handle_enter_notify called')
         window = event.window
+        self.focus_window(window)
         window.set_input_focus(X.RevertToParent, 0)
 
     def handle_map_notify(self, event):
@@ -911,12 +872,18 @@ class vwm:
         debug('handler: handle_map_request called')
         self.manage_window(event.window)
         self.focus_window(event.window)
-        self.cb_tile_windows(event.window)
+        self.tile_windows(event.window)
         self.framed_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
 
     def handle_destroy_notify(self, event):
         debug('handler: handle_destroy_notify called')
         self.unmanage_window(event.window)
+        self.focus_next_window(event.window)
+        try:
+            self.framed_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
+            self.tile_windows(self.framed_window)
+        except:
+            return
 
     def handle_key_press(self, event):
         debug('handler: handle_key_press called')
