@@ -4,38 +4,10 @@ import subprocess
 import re
 import time
 import math
+import config
+from constants import *
 from Xlib import X, XK, display
 
-INIT_PTR_POS = 30
-WINDOW_MIN_WIDTH = 1920 / 8
-WINDOW_MIN_HEIGHT = 1080 / 8
-
-DRAG_INTERVAL = 1 / 60
-
-LEFT = 1
-RIGHT = 2
-UPPER = 4
-LOWER = 8
-
-HORIZONTAL = 1
-VERTICAL = 2
-
-FORWARD = 0
-BACKWARD = 1
-
-MAX_VSCREEN = 4
-
-# TODO: Config file this shit
-EDITOR = 'gnome-text-editor'
-TERMINAL = 'xterm'
-BROWSER = 'nitrogen'
-
-PRIORITY_WINDOW = EDITOR
-
-FRAME_COLOR = 'light sky blue'
-FRAME_THICKNESS = 4
-
-FONT = '-misc-fixed-bold-r-normal--18-120-100-100-c-90-iso10646-1'
 
 EVENTS = {
     X.ButtonPress: 'handle_button_press',
@@ -49,29 +21,6 @@ EVENTS = {
     X.KeyPress: 'handle_key_press',
     X.KeyRelease: 'handle_key_release',
     X.ConfigureRequest: 'handle_configure_request',
-}
-
-# TODO: Config file this shit too
-KEY_BINDS = {
-    ('i', X.Mod1Mask): {'method': 'cb_focus_next_window', 'arg': FORWARD},
-    ('r', X.Mod1Mask): {'method': 'cb_raise_window'},
-    ('1', X.Mod1Mask): {'command': f'{TERMINAL} &'},
-    ('2', X.Mod1Mask): {'command': f'{EDITOR} &'},
-    ('3', X.Mod1Mask): {'command': f'{BROWSER} &'},
-    ('m', X.Mod1Mask): {'method': 'cb_maximize_window'},
-    ('f', X.Mod1Mask): {'method': 'cb_move_window_to_next_monitor'},
-    ('s', X.Mod1Mask): {'method': 'cb_swap_windows_bw_monitors'},
-    ('x', X.Mod1Mask): {'method': 'cb_destroy_window'},
-    ('F1', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 0},
-    ('F2', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 1},
-    ('F3', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 2},
-    ('F4', X.Mod1Mask): {'method': 'cb_select_vscreen', 'arg': 3},
-    ('d', X.Mod1Mask): {'method': 'cb_send_window_to_next_vscreen', 'arg': FORWARD},
-    ('a', X.Mod1Mask): {'method': 'cb_send_window_to_next_vscreen', 'arg': BACKWARD},
-    ('Delete', X.Mod1Mask): {'function': 'restart'},
-    ('Home', X.Mod1Mask): {'method': 'cb_reconfigure_monitors', 'arg': True},
-    ('End', X.Mod1Mask): {'method': 'cb_reconfigure_monitors', 'arg': False},
-    ('BackSpace', X.Mod1Mask): {'method': 'cb_set_always_top'},
 }
 
 
@@ -90,6 +39,7 @@ class vwm:
         self.screen = self.display.screen()
         self.colormap = self.screen.default_colormap
         self.keybinds = {}
+        self.config = config.Config()
 
         self.managed_windows = {}
         self.exposed_windows = []
@@ -149,7 +99,7 @@ class vwm:
 
     def grab_keys(self):
         debug('function: grab_keys called')
-        for (key, modifier), rule in KEY_BINDS.items():
+        for (key, modifier), rule in self.config.keybinds.items():
             keysym = XK.string_to_keysym(key)
             keycode = self.display.keysym_to_keycode(keysym)
             if modifier is None:
@@ -668,15 +618,6 @@ class vwm:
         target_windows.sort(key=sort_key)
         nrows, ncols = self.get_tile_layout(len(target_windows))
         offcuts_num = nrows * ncols - len(target_windows)
-        eidx = None
-        for i in range(len(target_windows)):
-            if PRIORITY_WINDOW in self.get_window_class(target_windows[i]).lower():
-                eidx = i
-        if eidx is not None:
-            target_windows[eidx], target_windows[ncols * (nrows - 1) - 1] = (
-                target_windows[ncols * (nrows - 1) - 1],
-                target_windows[eidx],
-            )
         for row in reversed(range(nrows)):
             for col in reversed(range(ncols)):
                 if not target_windows:
@@ -729,12 +670,6 @@ class vwm:
                     self.pressed_keys = self.pressed_keys | {
                         self.mod_mask_string[1 << i]}
         # self.update_selection_window()
-
-    def cb_raise_window(self, event):
-        debug('callback: cb_raise_window called')
-        window = event.child
-        self.focus_window(window)
-        self.set_window_to_stack_top(window)
 
     def cb_maximize_window(self, event):
         debug('callback: cb_maximize_window called')
