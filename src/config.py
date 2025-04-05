@@ -3,13 +3,6 @@ import os
 from constants import *
 from Xlib import X
 
-MOD_MAPPING = {
-    'super': X.Mod4Mask,
-    'shift': X.ShiftMask,
-    'alt': X.Mod1Mask,
-    'ctrl': X.ControlMask,
-}
-
 
 class Config:
     def __init__(self):
@@ -20,13 +13,7 @@ class Config:
         self.keybinds = {}
         binds = self.config.get('keybinds', [])
         for bind in binds:
-            mods = {bind.get('mod1'), bind.get('mod2')} - {None}
-            xmods = 0
-            for mod in mods:
-                if mod in MOD_MAPPING:
-                    xmods |= MOD_MAPPING[mod]
-
-            key_combination = (bind['key'], xmods)
+            key = bind['key']
 
             action = bind['action']
             match action:
@@ -53,6 +40,6 @@ class Config:
                 case _:
                     res = {'command': f'{action} &'}
 
-            self.keybinds[key_combination] = res
+            self.keybinds[key] = res
 
         print(self.keybinds)

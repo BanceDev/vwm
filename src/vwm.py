@@ -40,6 +40,8 @@ class vwm:
         self.colormap = self.screen.default_colormap
         self.keybinds = {}
         self.config = config.Config()
+        self.mode = COMMAND_MODE
+        self.bar_height = 24
 
         self.managed_windows = {}
         self.exposed_windows = []
@@ -56,9 +58,11 @@ class vwm:
         self.maxsize = self.get_screen_size()
 
         self.catch_events()
-        self.grab_keys()
+        self.map_keys()
         self.grab_buttons()
         self.create_frame_windows()
+        self.create_statusbar()
+        self.command_mode()
 
         self.create_selection_window()
         self.font = self.display.open_font(FONT)
@@ -97,18 +101,12 @@ class vwm:
             | X.FocusChangeMask
         )
 
-    def grab_keys(self):
+    def map_keys(self):
         debug('function: grab_keys called')
-        for (key, modifier), rule in self.config.keybinds.items():
+        for key, rule in self.config.keybinds.items():
             keysym = XK.string_to_keysym(key)
             keycode = self.display.keysym_to_keycode(keysym)
-            if modifier is None:
-                continue
-            self.screen.root.grab_key(
-                keycode, modifier, True, X.GrabModeAsync, X.GrabModeAsync)
-            self.keybinds[(keycode, modifier)] = rule
-            debug(f'debug: ({key}, {modifier}) grabbed as ({
-                  keycode}, {modifier})')
+            self.keybinds[keycode] = rule
 
     def grab_buttons(self):
         debug('function: grub_buttons called')
@@ -116,6 +114,53 @@ class vwm:
             self.screen.root.grab_button(
                 button, X.Mod1Mask, True, X.ButtonPressMask, X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE
             )
+
+    def command_mode(self):
+        self.mode = COMMAND_MODE
+        self.screen.root.grab_keyboard(
+            True, X.GrabModeAsync, X.GrabModeAsync, X.CurrentTime
+        )
+        self.draw_statusbar()
+
+    def input_mode(self):
+        self.mode = INPUT_MODE
+        self.display.ungrab_keyboard(X.CurrentTime)
+
+        # global shortcut to toggle modes
+        space = XK.string_to_keysym('space')
+        space_keycode = self.display.keysym_to_keycode(space)
+        self.screen.root.grab_key(
+            space_keycode, X.Mod1Mask, True, X.GrabModeAsync, X.GrabModeAsync)
+        self.draw_statusbar()
+
+    def create_statusbar(self):
+        self.bar_pixel = self.colormap.alloc_named_color(BAR_COLOR).pixel
+        self.bar_window = self.screen.root.create_window(
+            0,
+            self.screen.height_in_pixels - self.bar_height,
+            self.screen.width_in_pixels,
+            self.bar_height,
+            0,
+            self.screen.root_depth,
+            X.InputOutput,
+            X.CopyFromParent,
+            background_pixel=self.bar_pixel,
+            override_redirect=True,
+        )
+        self.bar_window.map()
+
+    def draw_statusbar(self):
+        gc = self.bar_window.create_gc(
+            foreground=self.screen.black_pixel,
+            background=self.bar_pixel,
+        )
+        if self.mode == COMMAND_MODE:
+            text = 'Command:'
+        else:
+            text = 'Insert:'
+
+        self.bar_window.clear_area()
+        self.bar_window.draw_text(gc, 10, 16, text)
 
     def create_frame_windows(self):
         debug('function: crate_frame_windows called')
@@ -385,7 +430,8 @@ class vwm:
                 if not geom:
                     debug(f'Monitor {name} is connected but not mapped.')
                     continue
-                width, height, x, y = geom['width'], geom['height'], geom['x'], geom['y']
+                width, height, x, y = geom['width'], geom['height'] - \
+                    self.bar_height, geom['x'], geom['y']
                 geometries[name] = {
                     'name': name,
                     'width': width,
@@ -823,25 +869,34 @@ class vwm:
     def handle_key_press(self, event):
         debug('handler: handle_key_press called')
         keycode = event.detail
+        keysym = self.display.keycode_to_keysym(keycode, 0)
         modifier = event.state
-        entry = (keycode, modifier)
-        rule = self.keybinds.get(entry, None)
-        if rule:
-            if 'method' in rule:
-                method = getattr(self, rule['method'], None)
-                arg = rule.get('arg', None)
-                if method:
-                    if arg is not None:
-                        method(event, arg)
-                    else:
-                        method(event)
-            elif 'function' in rule:
-                function = globals().get(rule['function'], None)
-                if function:
-                    function()
-            elif 'command' in rule:
-                debug(f'executing "{rule["command"]}"')
-                os.system(rule['command'])
+
+        if modifier & X.Mod1Mask and keysym == XK.XK_space:
+            if self.mode == COMMAND_MODE:
+                self.input_mode()
+            else:
+                self.command_mode()
+            return
+
+        if self.mode == COMMAND_MODE:
+            rule = self.keybinds.get(keycode, None)
+            if rule:
+                if 'method' in rule:
+                    method = getattr(self, rule['method'], None)
+                    arg = rule.get('arg', None)
+                    if method:
+                        if arg is not None:
+                            method(event, arg)
+                        else:
+                            method(event)
+                elif 'function' in rule:
+                    function = globals().get(rule['function'], None)
+                    if function:
+                        function()
+                elif 'command' in rule:
+                    debug(f'executing "{rule["command"]}"')
+                    os.system(rule['command'])
 
     def handle_key_release(self, event):
         debug('handler: handle_key_release called')
