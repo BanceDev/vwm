@@ -5,6 +5,7 @@ import re
 import time
 import math
 import config
+import cairo
 from constants import *
 from Xlib import X, XK, display
 
@@ -40,7 +41,7 @@ class vwm:
         self.colormap = self.screen.default_colormap
         self.keybinds = {}
         self.config = config.Config()
-        self.mode = COMMAND_MODE
+        self.mode = NORMAL_MODE
         self.bar_height = 24
 
         self.managed_windows = {}
@@ -62,7 +63,7 @@ class vwm:
         self.grab_buttons()
         self.create_frame_windows()
         self.create_statusbar()
-        self.command_mode()
+        self.normal_mode()
 
         self.create_selection_window()
         self.font = self.display.open_font(FONT)
@@ -115,8 +116,8 @@ class vwm:
                 button, X.Mod1Mask, True, X.ButtonPressMask, X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE
             )
 
-    def command_mode(self):
-        self.mode = COMMAND_MODE
+    def normal_mode(self):
+        self.mode = NORMAL_MODE
         self.screen.root.grab_keyboard(
             True, X.GrabModeAsync, X.GrabModeAsync, X.CurrentTime
         )
@@ -132,6 +133,13 @@ class vwm:
         self.screen.root.grab_key(
             space_keycode, X.Mod1Mask, True, X.GrabModeAsync, X.GrabModeAsync)
         self.draw_statusbar()
+
+    def hex_to_rgb_float(self, hex_color):
+        hex_color = hex_color.lstrip('#')
+        r = int(hex_color[0:2], 16) / 255.0
+        g = int(hex_color[2:4], 16) / 255.0
+        b = int(hex_color[4:6], 16) / 255.0
+        return (r, g, b)
 
     def create_statusbar(self):
         self.bar_pixel = self.colormap.alloc_named_color(BAR_COLOR).pixel
@@ -154,13 +162,51 @@ class vwm:
             foreground=self.screen.black_pixel,
             background=self.bar_pixel,
         )
-        if self.mode == COMMAND_MODE:
-            text = 'Command:'
-        else:
-            text = 'Insert:'
 
-        self.bar_window.clear_area()
-        self.bar_window.draw_text(gc, 10, 16, text)
+        if self.mode == NORMAL_MODE:
+            text = 'Normal'
+            bg_color = self.hex_to_rgb_float('#7FFFD4')
+        else:
+            text = 'Insert'
+            bg_color = self.hex_to_rgb_float('#87CEEB')
+
+        drawable = self.bar_window.id
+        width = self.screen.width_in_pixels
+        height = self.bar_height
+        depth = self.screen.root_depth
+
+        surface = cairo.ImageSurface(
+            cairo.FORMAT_RGB24,
+            width,
+            height
+        )
+
+        ctx = cairo.Context(surface)
+
+        ctx.set_source_rgb(*bg_color)
+        ctx.rectangle(0, 0, width, height)
+        ctx.fill()
+
+        ctx.select_font_face(self.config.font,
+                             cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        ctx.set_font_size(14)
+        ctx.set_source_rgb(0.2, 0.2, 0.2)
+        ctx.move_to(10, self.bar_height // 2 + 5)
+        ctx.show_text(f'{text}')
+        ctx.stroke()
+
+        surface.flush()
+
+        buf = bytes(surface.get_data())
+        self.bar_window.put_image(
+            gc,
+            0, 0,
+            width, height,
+            2,
+            self.screen.root_depth,
+            0,
+            buf
+        )
 
     def create_frame_windows(self):
         debug('function: crate_frame_windows called')
@@ -873,13 +919,13 @@ class vwm:
         modifier = event.state
 
         if modifier & X.Mod1Mask and keysym == XK.XK_space:
-            if self.mode == COMMAND_MODE:
+            if self.mode == NORMAL_MODE:
                 self.input_mode()
             else:
-                self.command_mode()
+                self.normal_mode()
             return
 
-        if self.mode == COMMAND_MODE:
+        if self.mode == NORMAL_MODE:
             rule = self.keybinds.get(keycode, None)
             if rule:
                 if 'method' in rule:

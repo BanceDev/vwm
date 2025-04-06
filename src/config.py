@@ -42,4 +42,4 @@ class Config:
 
             self.keybinds[key] = res
 
-        print(self.keybinds)
+        self.font = self.config.get('font') or 'Courier'
