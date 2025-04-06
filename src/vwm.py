@@ -43,6 +43,7 @@ class vwm:
         self.config = config.Config()
         self.mode = NORMAL_MODE
         self.bar_height = 24
+        self.command_buff = ''
 
         self.managed_windows = {}
         self.exposed_windows = []
@@ -116,11 +117,20 @@ class vwm:
                 button, X.Mod1Mask, True, X.ButtonPressMask, X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE
             )
 
+    def command_mode(self):
+        self.mode = COMMAND_MODE
+        self.screen.root.grab_keyboard(
+            True, X.GrabModeAsync, X.GrabModeAsync, X.CurrentTime
+        )
+        self.command_buff = ''
+        self.draw_statusbar()
+
     def normal_mode(self):
         self.mode = NORMAL_MODE
         self.screen.root.grab_keyboard(
             True, X.GrabModeAsync, X.GrabModeAsync, X.CurrentTime
         )
+        self.command_buff = ''
         self.draw_statusbar()
 
     def input_mode(self):
@@ -128,10 +138,11 @@ class vwm:
         self.display.ungrab_keyboard(X.CurrentTime)
 
         # global shortcut to toggle modes
-        space = XK.string_to_keysym('space')
-        space_keycode = self.display.keysym_to_keycode(space)
+        esc = XK.string_to_keysym('Escape')
+        esc_keycode = self.display.keysym_to_keycode(esc)
         self.screen.root.grab_key(
-            space_keycode, X.Mod1Mask, True, X.GrabModeAsync, X.GrabModeAsync)
+            esc_keycode, 0, True, X.GrabModeAsync, X.GrabModeAsync)
+        self.command_buff = ''
         self.draw_statusbar()
 
     def hex_to_rgb_float(self, hex_color):
@@ -163,12 +174,17 @@ class vwm:
             background=self.bar_pixel,
         )
 
+        # TODO: config the colors
         if self.mode == NORMAL_MODE:
             text = 'Normal'
             bg_color = self.hex_to_rgb_float('#7FFFD4')
-        else:
+        elif self.mode == INPUT_MODE:
             text = 'Insert'
             bg_color = self.hex_to_rgb_float('#87CEEB')
+        elif self.mode == COMMAND_MODE:
+            text = 'Command '
+            text += self.command_buff
+            bg_color = self.hex_to_rgb_float('#9370DB')
 
         drawable = self.bar_window.id
         width = self.screen.width_in_pixels
@@ -918,11 +934,24 @@ class vwm:
         keysym = self.display.keycode_to_keysym(keycode, 0)
         modifier = event.state
 
-        if modifier & X.Mod1Mask and keysym == XK.XK_space:
-            if self.mode == NORMAL_MODE:
-                self.input_mode()
-            else:
-                self.normal_mode()
+        if keysym == XK.XK_i and self.mode == NORMAL_MODE:
+            self.input_mode()
+            return
+
+        if (
+            not modifier & X.ShiftMask and
+            keysym == XK.XK_Escape and
+            self.mode == INPUT_MODE
+        ):
+            self.normal_mode()
+            return
+
+        if (
+            modifier & X.ShiftMask and
+            keysym == XK.XK_semicolon and
+            self.mode == NORMAL_MODE
+        ):
+            self.command_mode()
             return
 
         if self.mode == NORMAL_MODE:
@@ -943,6 +972,21 @@ class vwm:
                 elif 'command' in rule:
                     debug(f'executing "{rule["command"]}"')
                     os.system(rule['command'])
+        elif self.mode == COMMAND_MODE and keysym is not None:
+            match keysym:
+                case XK.XK_Escape:
+                    self.normal_mode()
+                case XK.XK_Return:
+                    os.system(self.command_buff + ' &')
+                    self.normal_mode()
+                case XK.XK_BackSpace:
+                    self.command_buff = self.command_buff[:-1]
+                    self.draw_statusbar()
+                case _:
+                    key = XK.keysym_to_string(keysym)
+                    if key is not None:
+                        self.command_buff += key
+                        self.draw_statusbar()
 
     def handle_key_release(self, event):
         debug('handler: handle_key_release called')
