@@ -141,7 +141,7 @@ class vwm:
         esc = XK.string_to_keysym('Escape')
         esc_keycode = self.display.keysym_to_keycode(esc)
         self.screen.root.grab_key(
-            esc_keycode, 0, True, X.GrabModeAsync, X.GrabModeAsync)
+            esc_keycode, X.ShiftMask, True, X.GrabModeAsync, X.GrabModeAsync)
         self.command_buff = ''
         self.draw_statusbar()
 
@@ -939,7 +939,7 @@ class vwm:
             return
 
         if (
-            not modifier & X.ShiftMask and
+            modifier & X.ShiftMask and
             keysym == XK.XK_Escape and
             self.mode == INPUT_MODE
         ):
@@ -1035,6 +1035,8 @@ class vwm:
 
 
 def main():
+    os.environ["GTK_THEME"] = "Adwaita:dark"
+    os.environ["GTK_APPLICATION_PREFER_DARK_THEME"] = "1"
     wm = vwm()
     for win in wm.managed_windows:
         print(wm.get_window_name(win), file=sys.stderr)
