@@ -104,14 +104,12 @@ class vwm:
         )
 
     def map_keys(self):
-        debug('function: grab_keys called')
         for key, rule in self.config.keybinds.items():
             keysym = XK.string_to_keysym(key)
             keycode = self.display.keysym_to_keycode(keysym)
             self.keybinds[keycode] = rule
 
     def grab_buttons(self):
-        debug('function: grub_buttons called')
         for button in [1, 3]:
             self.screen.root.grab_button(
                 button, X.Mod1Mask, True, X.ButtonPressMask, X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE
@@ -380,7 +378,10 @@ class vwm:
         self.window_vscreen[window] = self.current_vscreen
         window.map()
         window.change_attributes(
-            event_mask=X.EnterWindowMask | X.LeaveWindowMask)
+            event_mask=X.EnterWindowMask
+            | X.LeaveWindowMask
+            | X.ButtonPressMask
+        )
 
     def unmanage_window(self, window):
         debug('function: unmanage_window called')
@@ -433,7 +434,6 @@ class vwm:
         else:
             next_window = self.exposed_windows[0]
         self.focus_window(next_window)
-        next_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
 
     def get_window_geometry(self, window):
         # debug('debug: get_window_geometry called')
@@ -740,7 +740,6 @@ class vwm:
                     height = monitor['height'] // nrows
                     y = monitor['y'] + monitor['height'] * row // nrows
                 win.configure(x=x, y=y, width=width, height=height)
-        window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
 
     def set_window_to_stack_top(self, window):
         # debug('callback: set_window_to_stack_top called')
@@ -785,7 +784,6 @@ class vwm:
         try:
 
             self.maximize_window(window, HORIZONTAL | VERTICAL)
-            window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
             self.draw_frame_windows()
         except:
             return
@@ -795,7 +793,6 @@ class vwm:
         window = self.framed_window
         try:
             self.move_window_to_next_monitor(window)
-            window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
             self.draw_frame_windows()
         except:
             return
@@ -805,7 +802,6 @@ class vwm:
         for window in self.exposed_windows:
             self.move_window_to_next_monitor(window)
         window = self.framed_window
-        window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
         self.focus_window(window)
 
     def cb_destroy_window(self, event):
@@ -824,7 +820,6 @@ class vwm:
         if self.exposed_windows:
             self.sort_exposed_windows()
             self.focus_window(self.exposed_windows[0])
-            self.framed_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
         else:
             self.framed_window = None
             self.unmap_frame_windows()
@@ -835,7 +830,6 @@ class vwm:
         idx = self.send_window_to_next_vscreen(window, args)
         if idx is not None:
             self.select_vscreen(idx)
-            window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
             self.focus_window(window)
 
     def cb_reconfigure_monitors(self, event, remap):
@@ -887,6 +881,7 @@ class vwm:
             True, X.PointerMotionMask | X.ButtonReleaseMask, X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE, 0
         )
         self.focus_window(window)
+        self.input_mode()
         self.start = event
         self.start_geom = self.get_window_geometry(window)
 
@@ -916,14 +911,12 @@ class vwm:
         self.manage_window(event.window)
         self.focus_window(event.window)
         self.tile_windows(event.window)
-        self.framed_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
 
     def handle_destroy_notify(self, event):
         debug('handler: handle_destroy_notify called')
         self.unmanage_window(event.window)
         self.focus_next_window(event.window)
         try:
-            self.framed_window.warp_pointer(INIT_PTR_POS, INIT_PTR_POS)
             self.tile_windows(self.framed_window)
         except:
             return
@@ -1035,9 +1028,14 @@ class vwm:
 
 
 def main():
-    os.environ["GTK_THEME"] = "Adwaita:dark"
-    os.environ["GTK_APPLICATION_PREFER_DARK_THEME"] = "1"
     wm = vwm()
+    os.environ["GTK_THEME"] = wm.config.gtk_theme
+    os.environ["GTK_APPLICATION_PREFER_DARK_THEME"] = {
+        'dark': '1',
+        'light': '0'
+    }.get(wm.config.mode, 0)
+    os.environ["GTK_ICON_THEME"] = wm.config.icons
+
     for win in wm.managed_windows:
         print(wm.get_window_name(win), file=sys.stderr)
     wm.loop()

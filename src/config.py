@@ -41,5 +41,7 @@ class Config:
                     res = {'command': f'{action} &'}
 
             self.keybinds[key] = res
-
+        self.gtk_theme = self.config['theme'].get('gtk-theme', 'Adwaita:dark')
+        self.mode = self.config['theme'].get('mode', 'light')
+        self.icons = self.config['theme'].get('icons', 'Adwaita')
         self.font = self.config.get('font') or 'Courier'
